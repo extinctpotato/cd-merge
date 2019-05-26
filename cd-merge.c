@@ -11,9 +11,12 @@
 
 void gethelp(char *argument)
 {
-	printf("Usage %s -1 [CD1] -2 [CD2]\n", argument);
-	printf("Pass -m if you want to move the files after merging\n");
-	printf("If you passed the '-m' parameter you can optionally rename all files in the format 'TRACKNUMBER TRACKTITLE' by passing '-r'\n");
+	printf("Usage: %s -1 [CD1] -2 [CD2] [OPTIONS]\n", argument);
+	printf("Change the TRACK tag in CD2 so that it becomes contiguous with CD1\n");
+	printf("THIS WILL NOT WORK ON UNTAGGED FILES!\n\n");
+	printf("Optional arguments:\n");
+	printf("   -m\tMove files from CD1 to CD2\n");
+	printf("   -r\tRename the files in format 'TRACK TRACKNAME'\n");
 }
 
 int dircount(DIR *dir)
@@ -132,7 +135,6 @@ int main(int argc, char *argv[])
 	int option_index=0;
 	int CD1TRACKS=0;
 	int CD2TRACKS=0;
-	int movedone=0;
 	DIR *CD1, *CD2;
 	char CD1_PATH[BUFFER], CD2_PATH[BUFFER];
 	
@@ -174,7 +176,6 @@ int main(int argc, char *argv[])
 				if(CD1TRACKS != 0 && CD2TRACKS !=0)
 				{
 					move(CD2, CD2_PATH, CD1_PATH);
-					movedone=1;
 				}
 				else
 				{
@@ -186,7 +187,7 @@ int main(int argc, char *argv[])
 				gethelp(argv[0]);
 				break;
 			case 'r':
-				if(CD1TRACKS != 0 && movedone)
+				if(CD1TRACKS)
 				{
 					dirtagrename(CD1, CD1_PATH);
 				}
