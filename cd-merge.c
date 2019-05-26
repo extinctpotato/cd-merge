@@ -4,12 +4,16 @@
 #include <dirent.h>
 #include <getopt.h>
 #include <string.h>
+#include <ctype.h>
 #include <taglib/tag_c.h>
+
+#define BUFFER 128
 
 void gethelp(char *argument)
 {
 	printf("Usage %s -1 [CD1] -2 [CD2]\n", argument);
 	printf("Pass -m if you want to move the files after merging\n");
+	printf("If you passed the '-m' parameter you can optionally rename all files in the format 'TRACKNUMBER TRACKTITLE' by passing '-r'\n");
 }
 
 int dircount(DIR *dir)
@@ -35,6 +39,49 @@ void trackmodify(TagLib_File *file, int offset)
 	taglib_tag_set_track(tag, newtrack);
 	taglib_file_save(file);
 	printf("New track number: %d for ", newtrack);
+}
+
+void tracktagrename(char *filename)
+{
+	TagLib_File *file;
+	TagLib_Tag *tag;
+	char formatted[BUFFER];
+	
+	file = taglib_file_new(filename);
+	if(file != NULL)
+	{
+		tag = taglib_file_tag(file);
+	
+		if(taglib_tag_track(tag) < 10)
+		{
+			sprintf(formatted, "0%d", taglib_tag_track(tag));
+		}
+		else
+		{
+			sprintf(formatted, "%d", taglib_tag_track(tag));
+		}
+
+		sprintf(formatted + strlen(formatted), " %s", taglib_tag_title(tag));
+		sprintf(formatted + strlen(formatted), "%s", strrchr(filename, '.'));
+	
+		printf("Renaming %s to %s\n", filename, formatted);
+		
+		rename(filename, formatted);
+	}
+}
+
+void dirtagrename(DIR *dir, char *dirname)
+{
+	rewinddir(dir);
+	chdir(dirname);
+	struct dirent *dir_entry;
+	while((dir_entry=readdir(dir)) != NULL)
+	{
+		if(dir_entry -> d_type == DT_REG)
+		{
+			tracktagrename(dir_entry -> d_name);
+		}
+	}
 }
 
 void directorymodify(DIR *dir, int offset, char *dirname)
@@ -66,7 +113,7 @@ void move(DIR *source, char *sourcename, char *destinationname)
 	rewinddir(source);
 	struct dirent *dir_entry;
 	chdir(sourcename);
-	char fullpath[128];
+	char fullpath[BUFFER];
 	while((dir_entry=readdir(source)) != NULL)
 	{
 		if(dir_entry -> d_type == DT_REG)
@@ -80,15 +127,18 @@ void move(DIR *source, char *sourcename, char *destinationname)
 	}
 }
 
+
+
 int main(int argc, char *argv[])
 {
 	int option_index=0;
 	int CD1TRACKS=0;
 	int CD2TRACKS=0;
+	int movedone=0;
 	DIR *CD1, *CD2;
-	char CD1_PATH[128], CD2_PATH[128];
+	char CD1_PATH[BUFFER], CD2_PATH[BUFFER];
 	
-	while((option_index=getopt(argc, argv, "1:2:mh")) != -1)
+	while((option_index=getopt(argc, argv, "1:2:mrh")) != -1)
 	{
 		switch(option_index)
 		{
@@ -126,6 +176,7 @@ int main(int argc, char *argv[])
 				if(CD1TRACKS != 0 && CD2TRACKS !=0)
 				{
 					move(CD2, CD2_PATH, CD1_PATH);
+					movedone=1;
 				}
 				else
 				{
@@ -136,6 +187,22 @@ int main(int argc, char *argv[])
 			case 'h':
 				gethelp(argv[0]);
 				break;
+			case 'r':
+				if(CD1TRACKS != 0 && movedone)
+				{
+					dirtagrename(CD1, CD1_PATH);
+				}
+				else
+				{
+					printf("%s: nothing to rename or did not move the files\n", argv[0]);
+					return 1;
+				}
+				break;
+			case '?':
+				if(isprint(optopt))
+				{
+					gethelp(argv[0]);
+				}
 		}
 	}
 	
