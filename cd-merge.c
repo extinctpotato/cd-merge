@@ -118,9 +118,7 @@ void move(DIR *source, char *sourcename, char *destinationname)
 	{
 		if(dir_entry -> d_type == DT_REG)
 		{
-			strcpy(fullpath, destinationname);
-			strcat(fullpath, "/");
-			strcat(fullpath, dir_entry -> d_name);
+			sprintf(fullpath, "%s/%s", destinationname, dir_entry -> d_name);
 			printf("Moving %s to %s\n", dir_entry -> d_name, fullpath);
 			rename(dir_entry -> d_name, fullpath);
 		}
